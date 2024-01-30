@@ -5,6 +5,7 @@ Prosta implementacja biblioteki PHP dla mprofi API.
 ## Instalacja
 
 Skopiować plik connector.php do katalogu z projektem.
+Do poprawnego działania wymagany jest pakiet php-curl oraz PHP w wersji >=8.1.
 
 ## Przykłady użycia
 
@@ -17,11 +18,15 @@ $token = "34b039c7017e4ae886c350eb32XXXXXX";
 $client = new MprofiAPIConnector($token);
 
 # zwykła wiadomość
-$client->addMessage("500XXXXXX", "Test");
+$client->add_message("48500XXXXXX", "Test");
 
 # wiadomość zawiarająca polskie znaki diakrytyczne
 $options = array("encoding" => "utf-8");
-$client->addMessage("48668665482", "Wiadomość testowa", $options);
+$client->add_message("48500XXXXXX", "Wiadomość testowa", $options);
+
+# możemy ustawić powiązać z wiadomością własne ID i ustawieniem planowanej daty wysyłki
+$options = array("reference" => "my-msg-id-1", "date" => '2024-01-02 14:00:00');
+$client->add_message("48500XXXXXX", "Test sms z id klienta", $options);
 
 # metoda send zwraca tablicę identyfikatorów wiadomości
 $messageIds = $client->send();
@@ -29,6 +34,7 @@ $messageIds = $client->send();
 foreach ($messageIds as $msgId) {
   echo "msgId: " . $msgId . "\n";
 }
+
 ?>
 ```
 
@@ -61,6 +67,8 @@ $status = $client->get_status($messageId);
     "ts": "2015-01-01T09:51:32.431000+01:00"
   );
 */
+
+?>
 ```
 
 ### Pobieranie wiadomości
@@ -75,19 +83,30 @@ require_once('connector.php');
 $token_to_receive_sms = "77b039c7017e4ae886c350eb32XXXXXX";
 $client = new MprofiAPIConnector($token_to_receive_sms);
 
-$fromDate = "2015-01-01 0:00:00";
-$toDate = "2015-01-31 23:59:59";
-$incoming_messages = $client->get_incoming(fromDate, toDate);
+$from_date = "2023-02-01 0:00:00";
+$to_date = "2023-12-31 23:59:59";
+$incoming_messages = $client->get_incoming($from_date, $to_date);
 /*
   zwraca tablicę w postaci:
   array(
-    array(
-      "message" => "treść wiadomości",
-      "sender" => "48123456789",
-      "recipient" => "664400100",
-      "ts" => "2015-02-16 10:24:40"
-    ),
+    0 => array(
+          "message" => "treść wiadomości",
+          "sender" => "48123456789",
+          "recipient" => "664400100",
+          "ts" => "2015-02-16 10:24:40"
+        ),
 
   );
 */
+foreach ($incoming_messages as $message) {
+    echo "Id: " . $message['id'] . ", czas: " . $message['ts'] . ", od: " . $message['sender'] . ", do: " . $message['recipient'] . ", treść: " . $message['message'] . "\n";
+}
+
+?>
 ```
+
+## Wyjątki
+
+Próba utworzenia obiektu klasy MprofiAPIConnector rzuci wyjątek klasy Exception. Medoty send, get_status i get_incoming zwrócić wyjątek klasy Exception
+w przypadku błędu autoryzacji oraz innych problemem w komunikacji z API.
+Metody add_message i get_incoming mogą rzucić wyjątek klasy InvalidArgumentException.
